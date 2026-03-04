@@ -24,7 +24,7 @@ class SpatialPyramidPooling(Layer):
     def __init__(self, pool_list, **kwargs):
 
         self.image_data_format = K.image_data_format()
-        print(self.image_data_format)
+        # print(self.image_data_format)
         assert self.image_data_format in {'channels_last', 'channels_first'}, 'image_data_format must be in {channels_last, channels_first}'
 
         self.pool_list = pool_list
