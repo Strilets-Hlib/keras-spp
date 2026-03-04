@@ -1,4 +1,5 @@
-from keras.engine.topology import Layer
+import tensorflow as tf
+from keras.layers import Layer
 import keras.backend as K
 
 
@@ -13,9 +14,9 @@ class RoiPoolingConv(Layer):
     # Input shape
         list of two 4D tensors [X_img,X_roi] with shape:
         X_img:
-        `(1, channels, rows, cols)` if dim_ordering='th'
+        `(1, channels, rows, cols)` if dim_ordering='channels_first'
         or 4D tensor with shape:
-        `(1, rows, cols, channels)` if dim_ordering='tf'.
+        `(1, rows, cols, channels)` if dim_ordering='channels_last'.
         X_roi:
         `(1,num_rois,4)` list of rois, with ordering (x,y,w,h)
     # Output shape
@@ -25,8 +26,9 @@ class RoiPoolingConv(Layer):
 
     def __init__(self, pool_size, num_rois, **kwargs):
 
-        self.dim_ordering = K.image_dim_ordering()
-        assert self.dim_ordering in {'tf', 'th'}, 'dim_ordering must be in {tf, th}'
+        # self.dim_ordering = K.image_dim_ordering()
+        self.image_data_format = K.image_data_format()
+        assert self.image_data_format in {'channels_first', 'channels_last'}, 'image_data_format must be in {channels_last, channels_first}'
 
         self.pool_size = pool_size
         self.num_rois = num_rois
@@ -34,13 +36,13 @@ class RoiPoolingConv(Layer):
         super(RoiPoolingConv, self).__init__(**kwargs)
 
     def build(self, input_shape):
-        if self.dim_ordering == 'th':
-            self.nb_channels = input_shape[0][1]
-        elif self.dim_ordering == 'tf':
-            self.nb_channels = input_shape[0][3]
+        if self.image_data_format == 'channels_first':
+            self.nb_channels = input_shape[1]
+        elif self.image_data_format == 'channels_last':
+            self.nb_channels = input_shape[3]
 
     def compute_output_shape(self, input_shape):
-        if self.dim_ordering == 'th':
+        if self.image_data_format == 'channels_first':
             return None, self.num_rois, self.nb_channels, self.pool_size, self.pool_size
         else:
             return None, self.num_rois, self.pool_size, self.pool_size, self.nb_channels
@@ -52,7 +54,7 @@ class RoiPoolingConv(Layer):
         img = x[0]
         rois = x[1]
 
-        input_shape = K.shape(img)
+        input_shape = tf.shape(img)
 
         outputs = []
 
@@ -68,7 +70,8 @@ class RoiPoolingConv(Layer):
 
             num_pool_regions = self.pool_size
 
-            if self.dim_ordering == 'th':
+            # if self.dim_ordering == 'th':
+            if self.image_data_format == 'channels_first':
                 for jy in range(num_pool_regions):
                     for ix in range(num_pool_regions):
                         x1 = x + ix * row_length
@@ -76,26 +79,27 @@ class RoiPoolingConv(Layer):
                         y1 = y + jy * col_length
                         y2 = y1 + col_length
 
-                        x1 = K.cast(x1, 'int32')
-                        x2 = K.cast(x2, 'int32')
-                        y1 = K.cast(y1, 'int32')
-                        y2 = K.cast(y2, 'int32')
+                        x1 = tf.cast(x1, 'int32')
+                        x2 = tf.cast(x2, 'int32')
+                        y1 = tf.cast(y1, 'int32')
+                        y2 = tf.cast(y2, 'int32')
 
-                        dx = K.maximum(1, x2 - x1)
+                        dx = tf.maximum(1, x2 - x1)
                         x2 = x1 + dx
 
-                        dy = K.maximum(1, y2 - y1)
+                        dy = tf.maximum(1, y2 - y1)
                         y2 = y1 + dy
 
                         new_shape = [input_shape[0], input_shape[1],
                                      y2 - y1, x2 - x1]
 
                         x_crop = img[:, :, y1:y2, x1:x2]
-                        xm = K.reshape(x_crop, new_shape)
+                        xm = tf.reshape(x_crop, new_shape)
                         pooled_val = K.max(xm, axis=(2, 3))
                         outputs.append(pooled_val)
 
-            elif self.dim_ordering == 'tf':
+            # elif self.dim_ordering == 'tf':
+            elif self.image_data_format == 'channels_last':
                 for jy in range(num_pool_regions):
                     for ix in range(num_pool_regions):
                         x1 = x + ix * row_length
@@ -103,24 +107,30 @@ class RoiPoolingConv(Layer):
                         y1 = y + jy * col_length
                         y2 = y1 + col_length
 
-                        x1 = K.cast(x1, 'int32')
-                        x2 = K.cast(x2, 'int32')
-                        y1 = K.cast(y1, 'int32')
-                        y2 = K.cast(y2, 'int32')
+                        x1 = tf.cast(x1, 'int32')
+                        x2 = tf.cast(x2, 'int32')
+                        y1 = tf.cast(y1, 'int32')
+                        y2 = tf.cast(y2, 'int32')
 
                         new_shape = [input_shape[0], y2 - y1,
                                      x2 - x1, input_shape[3]]
                         x_crop = img[:, y1:y2, x1:x2, :]
-                        xm = K.reshape(x_crop, new_shape)
+                        xm = tf.reshape(x_crop, new_shape)
                         pooled_val = K.max(xm, axis=(1, 2))
                         outputs.append(pooled_val)
 
-        final_output = K.concatenate(outputs, axis=0)
-        final_output = K.reshape(final_output, (1, self.num_rois, self.pool_size, self.pool_size, self.nb_channels))
+        final_output = tf.concatenate(outputs, axis=0)
+        final_output = tf.reshape(final_output, (1, self.num_rois, self.pool_size, self.pool_size, self.nb_channels))
 
-        if self.dim_ordering == 'th':
-            final_output = K.permute_dimensions(final_output, (0, 1, 4, 2, 3))
+        if self.dim_ordering == 'channels_first':
+            # final_output = K.permute_dimensions(final_output, (0, 1, 4, 2, 3))
+            final_output = tf.transpose(final_output, (0, 1, 4, 2, 3))
         else:
-            final_output = K.permute_dimensions(final_output, (0, 1, 2, 3, 4))
+            # final_output = K.permute_dimensions(final_output, (0, 1, 2, 3, 4))
+            final_output = tf.transpose(final_output, (0, 1, 2, 3, 4))
+        # if self.image_data_format == 'channels_first':
+        #     outputs = tf.concat(outputs, axis = 1)
+        # elif self.image_data_format == 'channels_last':
+        #     outputs = tf.concat(outputs,axis = 1)
 
         return final_output
