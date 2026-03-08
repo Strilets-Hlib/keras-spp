@@ -51,13 +51,13 @@ for img_size in [32]:
     for roi in range(num_rois):
 
         if image_data_format == 'channels_first':
-            X_curr = X_img[0, :, X_roi[0, roi, 1]:X_roi[0, roi, 1] + X_roi[0, roi, 3],
-                     X_roi[0, roi, 0]:X_roi[0, roi, 0] + X_roi[0, roi, 2]]
+            X_curr = X_img[0, :, intint(X_roi[0, roi, 1]):intint(X_roi[0, roi, 1]) + intint(X_roi[0, roi, 3]),
+                     intint(X_roi[0, roi, 0]):intint(X_roi[0, roi, 0]) + intint(X_roi[0, roi, 2])]
             row_length = float(X_curr.shape[1]) / pooling_regions
             col_length = float(X_curr.shape[2]) / pooling_regions
         elif image_data_format == 'channels_last':
-            X_curr = X_img[0, X_roi[0, roi, 1]:X_roi[0, roi, 1] + X_roi[0, roi, 3],
-                     X_roi[0, roi, 0]:X_roi[0, roi, 0] + X_roi[0, roi, 2], :]
+            X_curr = X_img[0, int(X_roi[0, roi, 1]):int(X_roi[0, roi, 1]) + int(X_roi[0, roi, 3]),
+                     int(X_roi[0, roi, 0]):int(X_roi[0, roi, 0]) + int(X_roi[0, roi, 2]), :]
             row_length = float(X_curr.shape[0]) / pooling_regions
             col_length = float(X_curr.shape[1]) / pooling_regions
 

@@ -6,7 +6,7 @@ from keras.models import Model
 from spp.RoiPooling import RoiPooling
 
 image_data_format = K.image_data_format()
-assert dim_ordering in {'channels_first', 'channels_last'}, 'image_data_format must be in {channels_last, channels_first}'
+assert image_data_format in {'channels_first', 'channels_last'}, 'image_data_format must be in {channels_last, channels_first}'
 # assert image_data_format in {'tf', 'th'}, 'image_data_format must be in {tf, th}'
 
 pooling_regions = [1, 2, 4]
@@ -48,11 +48,11 @@ for img_size in [8, 16, 32]:
     for roi in range(num_rois):
 
         if image_data_format == 'channels_first':
-            X_curr = X_img[0, :, X_roi[0, roi, 0]:X_roi[0, roi, 2], X_roi[0, roi, 1]:X_roi[0, roi, 3]]
+            X_curr = X_img[0, :, int(X_roi[0, roi, 0]):int(X_roi[0, roi, 2]), int(X_roi[0, roi, 1]):int(X_roi[0, roi, 3])]
             row_lengchannels_first = [float(X_curr.shape[1]) / i for i in pooling_regions]
             col_lengchannels_first = [float(X_curr.shape[2]) / i for i in pooling_regions]
         elif image_data_format == 'channels_last':
-            X_curr = X_img[0, X_roi[0, roi, 0]:X_roi[0, roi, 2], X_roi[0, roi, 1]:X_roi[0, roi, 3], :]
+            X_curr = X_img[0, int(X_roi[0, roi, 0]):int(X_roi[0, roi, 2]), int(X_roi[0, roi, 1]):int(X_roi[0, roi, 3]), :]
             row_lengchannels_first = [float(X_curr.shape[0]) / i for i in pooling_regions]
             col_lengchannels_first = [float(X_curr.shape[1]) / i for i in pooling_regions]
 

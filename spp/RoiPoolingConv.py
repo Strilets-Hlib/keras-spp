@@ -37,9 +37,9 @@ class RoiPoolingConv(Layer):
 
     def build(self, input_shape):
         if self.image_data_format == 'channels_first':
-            self.nb_channels = input_shape[1]
+            self.nb_channels = input_shape[0][1]
         elif self.image_data_format == 'channels_last':
-            self.nb_channels = input_shape[3]
+            self.nb_channels = input_shape[0][3]
 
     def compute_output_shape(self, input_shape):
         if self.image_data_format == 'channels_first':
@@ -95,7 +95,8 @@ class RoiPoolingConv(Layer):
 
                         x_crop = img[:, :, y1:y2, x1:x2]
                         xm = tf.reshape(x_crop, new_shape)
-                        pooled_val = K.max(xm, axis=(2, 3))
+                        # pooled_val = K.max(xm, axis=(2, 3))
+                        pooled_val = tf.reduce_max(xm, axis=(2, 3))
                         outputs.append(pooled_val)
 
             # elif self.dim_ordering == 'tf':
@@ -116,13 +117,13 @@ class RoiPoolingConv(Layer):
                                      x2 - x1, input_shape[3]]
                         x_crop = img[:, y1:y2, x1:x2, :]
                         xm = tf.reshape(x_crop, new_shape)
-                        pooled_val = K.max(xm, axis=(1, 2))
+                        pooled_val = tf.reduce_max(xm, axis=(1, 2))
                         outputs.append(pooled_val)
 
-        final_output = tf.concatenate(outputs, axis=0)
+        final_output = tf.concat(outputs, axis=0)
         final_output = tf.reshape(final_output, (1, self.num_rois, self.pool_size, self.pool_size, self.nb_channels))
 
-        if self.dim_ordering == 'channels_first':
+        if self.image_data_format == 'channels_first':
             # final_output = K.permute_dimensions(final_output, (0, 1, 4, 2, 3))
             final_output = tf.transpose(final_output, (0, 1, 4, 2, 3))
         else:

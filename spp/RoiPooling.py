@@ -46,9 +46,9 @@ class RoiPooling(Layer):
     def build(self, input_shape):
 
         if self.image_data_format == 'channels_first':
-            self.nb_channels = input_shape[1]
+            self.nb_channels = input_shape[0][1]
         elif self.image_data_format == 'channels_last':
-            self.nb_channels = input_shape[3]
+            self.nb_channels = input_shape[0][3]
 
     def compute_output_shape(self, input_shape):
         return None, self.num_rois, self.nb_channels * self.num_outputs_per_channel
@@ -123,7 +123,7 @@ class RoiPooling(Layer):
                             pooled_val = tf.reduce_max(xm, axis=(1, 2))
                             outputs.append(pooled_val)
 
-        final_output = K.concatenate(outputs, axis=0)
+        final_output = tf.concat(outputs, axis=0)
         final_output = tf.reshape(final_output, (1, self.num_rois, self.nb_channels * self.num_outputs_per_channel))
 
         return final_output

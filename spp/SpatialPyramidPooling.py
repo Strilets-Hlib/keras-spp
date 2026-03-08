@@ -37,6 +37,7 @@ class SpatialPyramidPooling(Layer):
         if self.image_data_format == 'channels_first':
             self.nb_channels = input_shape[1]
         elif self.image_data_format == 'channels_last':
+            print(input_shape)
             self.nb_channels = input_shape[3]
 
     def get_output_shape_for(self, input_shape):
