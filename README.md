@@ -1,5 +1,5 @@
 # keras-spp
-Spatial pyramid pooling layers for keras, based on https://arxiv.org/abs/1406.4729 . This code requires Keras version 2.0 or greater.
+Spatial pyramid pooling layers for keras, based on https://arxiv.org/abs/1406.4729 . This code was updated in this fork to work with Keras version 3.0 or greater and Tensorflow.
 
 ![spp](http://i.imgur.com/SQWJVoD.png)
 
