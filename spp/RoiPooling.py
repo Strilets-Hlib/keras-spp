@@ -1,5 +1,6 @@
-from keras.engine.topology import Layer
+from keras.layers import Layer
 import keras.backend as K
+import tensorflow as tf
 
 
 class RoiPooling(Layer):
@@ -15,9 +16,9 @@ class RoiPooling(Layer):
     # Input shape
         list of two 4D tensors [X_img,X_roi] with shape:
         X_img:
-        `(1, channels, rows, cols)` if dim_ordering='th'
+        `(1, channels, rows, cols)` if dim_ordering='channels_first'
         or 4D tensor with shape:
-        `(1, rows, cols, channels)` if dim_ordering='tf'.
+        `(1, rows, cols, channels)` if dim_ordering='channels_last'.
         X_roi:
         `(1,num_rois,4)` list of rois, with ordering (x,y,w,h)
     # Output shape
@@ -27,8 +28,11 @@ class RoiPooling(Layer):
 
     def __init__(self, pool_list, num_rois, **kwargs):
 
-        self.dim_ordering = K.image_dim_ordering()
-        assert self.dim_ordering in {'tf', 'th'}, 'dim_ordering must be in {tf, th}'
+        # self.dim_ordering = K.image_dim_ordering()
+        # assert self.dim_ordering in {'tf', 'th'}, 'dim_ordering must be in {tf, th}'
+
+        self.image_data_format = K.image_data_format()
+        assert self.image_data_format in {'channels_first', 'channels_last'}, 'image_data_format must be in {channels_last, channels_first}'
 
         self.pool_list = pool_list
         self.num_rois = num_rois
@@ -38,10 +42,11 @@ class RoiPooling(Layer):
         super(RoiPooling, self).__init__(**kwargs)
 
     def build(self, input_shape):
-        if self.dim_ordering == 'th':
-            self.nb_channels = input_shape[0][1]
-        elif self.dim_ordering == 'tf':
-            self.nb_channels = input_shape[0][3]
+
+        if self.image_data_format == 'channels_first':
+            self.nb_channels = input_shape[1]
+        elif self.image_data_format == 'channels_last':
+            self.nb_channels = input_shape[3]
 
     def compute_output_shape(self, input_shape):
         return None, self.num_rois, self.nb_channels * self.num_outputs_per_channel
@@ -58,7 +63,7 @@ class RoiPooling(Layer):
         img = x[0]
         rois = x[1]
 
-        input_shape = K.shape(img)
+        input_shape = tf.shape(img)
 
         outputs = []
 
@@ -72,7 +77,8 @@ class RoiPooling(Layer):
             row_length = [w / i for i in self.pool_list]
             col_length = [h / i for i in self.pool_list]
 
-            if self.dim_ordering == 'th':
+            # if self.dim_ordering == 'th':
+            if self.image_data_format == 'channels_first':
                 for pool_num, num_pool_regions in enumerate(self.pool_list):
                     for ix in range(num_pool_regions):
                         for jy in range(num_pool_regions):
@@ -81,19 +87,20 @@ class RoiPooling(Layer):
                             y1 = y + jy * row_length[pool_num]
                             y2 = y1 + row_length[pool_num]
 
-                            x1 = K.cast(K.round(x1), 'int32')
-                            x2 = K.cast(K.round(x2), 'int32')
-                            y1 = K.cast(K.round(y1), 'int32')
-                            y2 = K.cast(K.round(y2), 'int32')
+                            x1 = tf.cast(tf.round(x1), 'int32')
+                            x2 = tf.cast(tf.round(x2), 'int32')
+                            y1 = tf.cast(tf.round(y1), 'int32')
+                            y2 = tf.cast(tf.round(y2), 'int32')
 
                             new_shape = [input_shape[0], input_shape[1],
                                          y2 - y1, x2 - x1]
                             x_crop = img[:, :, y1:y2, x1:x2]
-                            xm = K.reshape(x_crop, new_shape)
-                            pooled_val = K.max(xm, axis=(2, 3))
+                            xm = tf.reshape(x_crop, new_shape)
+                            pooled_val = tf.reduce_max(xm, axis=(2, 3))
                             outputs.append(pooled_val)
 
-            elif self.dim_ordering == 'tf':
+            # elif self.dim_ordering == 'tf':
+            elif self.image_data_format == 'channels_last':
                 for pool_num, num_pool_regions in enumerate(self.pool_list):
                     for ix in range(num_pool_regions):
                         for jy in range(num_pool_regions):
@@ -102,19 +109,19 @@ class RoiPooling(Layer):
                             y1 = y + jy * row_length[pool_num]
                             y2 = y1 + row_length[pool_num]
 
-                            x1 = K.cast(K.round(x1), 'int32')
-                            x2 = K.cast(K.round(x2), 'int32')
-                            y1 = K.cast(K.round(y1), 'int32')
-                            y2 = K.cast(K.round(y2), 'int32')
+                            x1 = tf.cast(tf.round(x1), 'int32')
+                            x2 = tf.cast(tf.round(x2), 'int32')
+                            y1 = tf.cast(tf.round(y1), 'int32')
+                            y2 = tf.cast(tf.round(y2), 'int32')
 
                             new_shape = [input_shape[0], y2 - y1,
                                          x2 - x1, input_shape[3]]
                             x_crop = img[:, y1:y2, x1:x2, :]
-                            xm = K.reshape(x_crop, new_shape)
-                            pooled_val = K.max(xm, axis=(1, 2))
+                            xm = tf.reshape(x_crop, new_shape)
+                            pooled_val = tf.reduce_max(xm, axis=(1, 2))
                             outputs.append(pooled_val)
 
         final_output = K.concatenate(outputs, axis=0)
-        final_output = K.reshape(final_output, (1, self.num_rois, self.nb_channels * self.num_outputs_per_channel))
+        final_output = tf.reshape(final_output, (1, self.num_rois, self.nb_channels * self.num_outputs_per_channel))
 
         return final_output
