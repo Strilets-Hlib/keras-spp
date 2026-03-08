@@ -2,6 +2,8 @@ from keras.layers import Layer
 import keras.backend as K
 import tensorflow as tf
 
+# K.set_image_dim_ordering('tf') --> K.set_image_data_format('channels_last')
+# K.set_image_dim_ordering('th') --> K.set_image_data_format('channels_first')
 
 class RoiPooling(Layer):
     """ROI pooling layer for 2D inputs.

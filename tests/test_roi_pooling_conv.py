@@ -7,16 +7,17 @@ from keras.models import Model
 
 from spp.RoiPoolingConv import RoiPoolingConv
 
-dim_ordering = K.image_dim_ordering()
-assert dim_ordering in {'tf', 'th'}, 'dim_ordering must be in {tf, th}'
+image_data_format = K.image_data_format()
+assert image_data_format in {'channels_first', 'channels_last'}, 'image_data_format must be in {channels_last, channels_first}'
+# assert image_data_format in {'tf', 'th'}, 'image_data_format must be in {tf, th}'
 
 pooling_regions = 2
 num_rois = 4
 num_channels = 12
 
-if dim_ordering == 'tf':
+if image_data_format == 'channels_last':
     in_img = Input(shape=(None, None, num_channels))
-elif dim_ordering == 'th':
+elif image_data_format == 'channels_last':
     in_img = Input(shape=(num_channels, None, None))
 
 in_roi = Input(shape=(num_rois, 4))
@@ -29,11 +30,11 @@ model.summary()
 model.compile(loss='mse', optimizer='sgd')
 
 for img_size in [32]:
-    if dim_ordering == 'th':
+    if image_data_format == 'channels_first':
         X_img = np.random.rand(1, num_channels, img_size, img_size)
         row_length = [float(X_img.shape[2]) / pooling_regions]
         col_length = [float(X_img.shape[3]) / pooling_regions]
-    elif dim_ordering == 'tf':
+    elif image_data_format == 'channels_last':
         X_img = np.random.rand(1, img_size, img_size, num_channels)
         row_length = [float(X_img.shape[1]) / pooling_regions]
         col_length = [float(X_img.shape[2]) / pooling_regions]
@@ -49,12 +50,12 @@ for img_size in [32]:
 
     for roi in range(num_rois):
 
-        if dim_ordering == 'th':
+        if image_data_format == 'channels_first':
             X_curr = X_img[0, :, X_roi[0, roi, 1]:X_roi[0, roi, 1] + X_roi[0, roi, 3],
                      X_roi[0, roi, 0]:X_roi[0, roi, 0] + X_roi[0, roi, 2]]
             row_length = float(X_curr.shape[1]) / pooling_regions
             col_length = float(X_curr.shape[2]) / pooling_regions
-        elif dim_ordering == 'tf':
+        elif image_data_format == 'channels_last':
             X_curr = X_img[0, X_roi[0, roi, 1]:X_roi[0, roi, 1] + X_roi[0, roi, 3],
                      X_roi[0, roi, 0]:X_roi[0, roi, 0] + X_roi[0, roi, 2], :]
             row_length = float(X_curr.shape[0]) / pooling_regions
@@ -75,14 +76,14 @@ for img_size in [32]:
                     x2 = x1 + dx
                     y2 = y1 + dy
 
-                    if dim_ordering == 'th':
+                    if image_data_format == 'channels_first':
                         m_val = np.max(X_curr[cn, y1:y2, x1:x2])
                         if abs(m_val - Y[0, roi, cn, jy, ix]) > 0.01:
                             pdb.set_trace()
                         np.testing.assert_almost_equal(
                             m_val, Y[0, roi, cn, jy, ix], decimal=6)
                         idx += 1
-                    elif dim_ordering == 'tf':
+                    elif image_data_format == 'channels_last':
                         m_val = np.max(X_curr[y1:y2, x1:x2, cn])
                         if abs(m_val - Y[0, roi, jy, ix, cn]) > 0.01:
                             pdb.set_trace()
