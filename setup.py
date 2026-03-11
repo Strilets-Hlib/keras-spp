@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='keras-spp',
-    version='',
+    version='2.0',
     packages=['spp'],
     url='',
     license='',
@@ -10,6 +10,7 @@ setup(
     author_email='',
     description='',
     requires=[
-        'keras'
+        'keras',
+        'tenserflow'
         ]
 )
