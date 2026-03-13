@@ -24,7 +24,6 @@ class SpatialPyramidPooling(Layer):
     def __init__(self, pool_list, **kwargs):
 
         self.image_data_format = K.image_data_format()
-        # print(self.image_data_format)
         assert self.image_data_format in {'channels_last', 'channels_first'}, 'image_data_format must be in {channels_last, channels_first}'
 
         self.pool_list = pool_list
@@ -37,7 +36,6 @@ class SpatialPyramidPooling(Layer):
         if self.image_data_format == 'channels_first':
             self.nb_channels = input_shape[1]
         elif self.image_data_format == 'channels_last':
-            print(input_shape)
             self.nb_channels = input_shape[3]
 
     def get_output_shape_for(self, input_shape):
@@ -115,3 +113,8 @@ class SpatialPyramidPooling(Layer):
         elif self.image_data_format == 'channels_last':
             outputs = tf.concat(outputs,axis = 1)
         return outputs
+    def _int8_build(self, input_shape):
+        if self.image_data_format == 'channels_first':
+            self.nb_channels = input_shape[1]
+        elif self.image_data_format == 'channels_last':
+            self.nb_channels = input_shape[3]

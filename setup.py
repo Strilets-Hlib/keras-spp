@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='keras-spp',
-    version='2.0',
+    version='2.1',
     packages=['spp'],
     url='',
     license='',
